@@ -15,9 +15,22 @@ n_octaves = 2
 n_dogs = 4
 k = 2 ** (1 / n_dogs)
 
+def summarize_img(img, name='img'):
+    print('** Summary of image: {} **'.format(name))
+    print('Shape: {}'.format(img.shape))
+    print('Dtype: {}'.format(img.dtype))
+    print('Min: {}'.format(np.min(img)))
+    print('Max: {}'.format(np.max(img)))
+    print('Mean: {}'.format(np.mean(img)))
+    print('Std: {}'.format(np.std(img)))
+    print('\n')
+
+def stretch_lims(x, lims=[0, 1]):
+    x = (x - np.min(x)) / (np.max(x) - np.min(x))
+    return x * (lims[1] - lims[0]) + lims[0]
+
 def to_uint8(img):
-    scaled = (img - np.min(img)) / (np.max(img) - np.min(img)) * 255
-    return scaled.astype('uint8')
+    return stretch_lims(img, lims=[0, 255]).astype('uint8')
 
 def build_dog_pyramid(img, sigma=1, n_dogs=2, n_octaves=2):
     pyramid = []
@@ -39,12 +52,14 @@ def build_dog_pyramid(img, sigma=1, n_dogs=2, n_octaves=2):
 # load image
 ref_img = imread(ref_img_name)
 ref_gray = color.rgb2gray(ref_img)
+summarize_img(ref_gray, name='ref_gray')
 
 # build dog pyramid
-pyramid = build_dog_pyramid(ref_img, sigma=sig, n_dogs=n_dogs, n_octaves=n_octaves)
-print("# octaves: {}".format(len(pyramid)))
-print("# dogs: {}".format(len(pyramid[0])))
+pyramid = build_dog_pyramid(ref_gray, sigma=sig, n_dogs=n_dogs, n_octaves=n_octaves)
+print('# octaves: {}'.format(len(pyramid)))
+print('# dogs: {}'.format(len(pyramid[0])))
 
 # save output
 out_img = pyramid[0][0]
+summarize_img(out_img, 'out_img')
 imwrite(tmp_img_name, to_uint8(out_img))
