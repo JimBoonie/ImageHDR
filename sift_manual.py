@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from imageio import imread, imwrite
 from skimage import color
-from skimage.transform import rescale, downscale_local_mean
+from skimage.transform import resize, rescale, downscale_local_mean
 from scipy.ndimage.filters import gaussian_filter
 
 ref_img_name = 'imgs/reference1.jpg'
@@ -34,22 +34,25 @@ def to_uint8(img):
     return stretch_lims(img, lims=[0, 255]).astype('uint8')
 
 def build_dog_pyramid(img, sigma=1, n_dogs=2, n_octaves=2):
+    img_shape = (img.shape[0], img.shape[1])
     img = rescale(img, 2)
-    pyramid = []
+    pyramid = np.ndarray(
+        [img_shape[0], img_shape[1], n_dogs * n_octaves],
+        dtype=img.dtype)
+    lvl_idx = 0
     for i in range(n_octaves):
-        level = []
         print("octave: {}".format(i))
         for j in range(n_dogs):
             print("k: {}".format(k ** (j + 1)))
             gauss_img1 = gaussian_filter(img, sigma=sigma * k ** j)
             gauss_img2 = gaussian_filter(img, sigma=sigma * k ** (j + 1))
             dog_img = gauss_img2 - gauss_img1
-            level.append(dog_img)
+            pyramid[:, :, lvl_idx] = resize(dog_img, img_shape)
+            lvl_idx = lvl_idx + 1
 
-        pyramid.append(level)
         summarize_img(img)
-        # img = resize(img, [x // 2 for x in img.shape[0:2]], interp='bilinear')
         img = downscale_local_mean(img, (2, 2))
+        # img = resize(img, [x // 2 for x in img.shape[0:2]], interp='bilinear')
         # img = rescale(img, 0.5, anti_aliasing=True)
 
     return pyramid
@@ -61,26 +64,21 @@ summarize_img(ref_gray, name='ref_gray')
 
 # build dog pyramid
 pyramid = build_dog_pyramid(ref_gray, sigma=sig, n_dogs=n_dogs, n_octaves=n_octaves)
-print('# octaves: {}'.format(len(pyramid)))
-print('# dogs: {}'.format(len(pyramid[0])))
+print('# octaves: {}'.format(n_octaves))
+print('# dogs: {}'.format(n_dogs))
 
-def display_pyramid(pyramid):
-    n_rows = len(pyramid)
-    n_cols = len(pyramid[0])
-    idx = 1
-    for i, level in enumerate(pyramid):
-        for j, dog in enumerate(level):
-            plt.subplot(n_rows, n_cols, idx)
-            plt.imshow(dog)
-            sig1 = sig * 2**i * k**j
-            sig2 = sig * 2**i * k**(j + 1)
-            plt.title('G(x, y, {:.2f}) - G(x, y, {:.2f})'.format(sig2, sig1))
-            idx = idx + 1
+def display_pyramid(pyramid, n_rows, n_cols):
+    for i in range(pyramid.shape[-1]):
+        plt.subplot(n_rows, n_cols, i + 1)
+        plt.imshow(pyramid[:, :, i])
+        sig1 = sig * k**i
+        sig2 = sig * k**(i + 1)
+        plt.title('G(x, y, {:.2f}) - G(x, y, {:.2f})'.format(sig2, sig1))
     plt.show()
 
-display_pyramid(pyramid)
+display_pyramid(pyramid, n_dogs, n_octaves)
 
 # save output
-out_img = pyramid[0][0]
+out_img = pyramid[:, :, 0]
 summarize_img(out_img, 'out_img')
 imwrite(tmp_img_name, to_uint8(out_img))
