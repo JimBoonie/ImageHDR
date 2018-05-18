@@ -11,9 +11,9 @@ ref_img_name = 'imgs/reference1.jpg'
 ali_img_name = 'imgs/aligned1.jpg'
 tmp_img_name = 'imgs/tmp.jpg'
 
-sig = 3
-n_octaves = 2
-n_dogs = 4
+sig = 1.6
+n_octaves = 4
+n_dogs = 2
 k = 2 ** (1 / n_dogs)
 
 def summarize_img(img, name='img'):
@@ -34,6 +34,7 @@ def to_uint8(img):
     return stretch_lims(img, lims=[0, 255]).astype('uint8')
 
 def build_dog_pyramid(img, sigma=1, n_dogs=2, n_octaves=2):
+    img = rescale(img, 2)
     pyramid = []
     for i in range(n_octaves):
         level = []
